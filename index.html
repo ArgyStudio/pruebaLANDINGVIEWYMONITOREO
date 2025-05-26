@@ -168,7 +168,7 @@
     const payload   = { subdomain: SUBDOMAIN, fbc, fbp };
 
     // 4. Llamada a Lambda LineManager
-    const API_URL  = 'https://t6cq896p7i.execute-api.us-east-2.amazonaws.com/prod/active-line';
+    const API_URL  = 'https://t6cq896p7i.execute-api.us-east-2.amazonaws.com//active-line';
     const response = await fetch(API_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
