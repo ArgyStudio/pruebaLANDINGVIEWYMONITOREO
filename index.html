@@ -126,72 +126,70 @@
 
   <!-- Funciones para Meta Pixel + captura de cookies + envío al API -->
   <script>
-    const API_URL = 'https://jxfyydlcu7.execute-api.us-east-2.amazonaws.com/prod/Capture_fbc';
-    const whatsappNumbers = [
-  '5491125737314',
-  '5491178446299',
-  '5491171836710',
-  '5491169771768',
-  '5491162557202',
-  '5491125730166',
-  '5491178446277',
-  '5491178466845',
-  '5491178467850',
-  '5491171635973',
-  '5491178466905'
-];
-    const mensajeBase = 'Hola vengo por el 200%!';
+    
+    
 
     function parseCookies() {
-      return document.cookie
-        .split('; ')
-        .reduce((c, kv) => {
-          const [name, ...v] = kv.split('=');
-          c[name] = v.join('=');
-          return c;
-        }, {});
+      return document.cookie.split('; ').reduce((acc, kv) => {
+        const [key, ...vals] = kv.split('=');
+        acc[key] = vals.join('=');
+        return acc;
+      }, {});
     }
 
-    function generateUUID() {
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      return Array.from(bytes)
-        .map(b => b.toString(16).padStart(2,'0'))
-        .join('');
-    }
+    
 
+      // Espera hasta que exista la cookie name o timeout (ms)
     function waitForCookie(name, timeout = 3000) {
-      return new Promise(res => {
-        const interval = 100;
-        let waited = 0;
-        const timer = setInterval(() => {
-          if (document.cookie.split('; ').some(c => c.startsWith(name + '=')) || waited >= timeout) {
-            clearInterval(timer);
-            res();
+      return new Promise(resolve => {
+        const start = Date.now();
+        (function check() {
+          if (document.cookie.split('; ').some(c => c.startsWith(name + '='))
+              || Date.now() - start > timeout) {
+            resolve();
+          } else {
+            requestAnimationFrame(check);
           }
-          waited += interval;
-        }, interval);
+        })();
       });
     }
 
-    // Preloader
-    window.addEventListener('load', ()=> {
-      const pre = document.getElementById('preloader');
-      pre.style.opacity = 0;
-      setTimeout(()=> pre.remove(), 600);
+    
+ window.addEventListener('load', async () => {
+  try {
+    // 2. Esperar cookies _fbc y _fbp para capturar IDs
+    await Promise.all([ waitForCookie('_fbc'), waitForCookie('_fbp') ]);
+    const ck  = parseCookies();
+    const fbc = ck._fbc || null;
+    const fbp = ck._fbp || null;
+
+    // 3. Preparar payload (sin UUID, generado en backend)
+    const SUBDOMAIN = 'bettroya';
+    const payload   = { subdomain: SUBDOMAIN, fbc, fbp };
+
+    // 4. Llamada a Lambda LineManager
+    const API_URL  = 'https://t6cq896p7i.execute-api.us-east-2.amazonaws.com/prod/active-line';
+    const response = await fetch(API_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
     });
+    if (!response.ok) throw new Error(`LineManager error: ${response.status}`);
+
+    const data                            = await response.json();
+    const { whatsapp_number: number, uuid } = data;
+    if (!number || !uuid) throw new Error('Respuesta inválida de LineManager');
 
     // Theme Toggle
     const toggle = document.getElementById('themeToggle');
-    toggle.addEventListener('click', ()=> {
+    toggle.addEventListener('click', () => {
       document.documentElement.classList.toggle('light');
       toggle.textContent = document.documentElement.classList.contains('light') ? '🌞' : '🌙';
     });
 
     // Lazy-load images
-    const lazyImgs = [];
-    document.querySelectorAll('.lazy').forEach(img => lazyImgs.push(img));
-    const obs = new IntersectionObserver(entries => {
+    const lazyImgs = Array.from(document.querySelectorAll('.lazy'));
+    const obs      = new IntersectionObserver(entries => {
       entries.forEach(e => {
         if (e.isIntersecting) {
           const img = e.target;
@@ -207,14 +205,16 @@
     (function(){
       const track = document.getElementById('track');
       const items = Array.from(track.children);
-      const dots = document.getElementById('dots');
+      const dots  = document.getElementById('dots');
       let current = 0;
+
       items.forEach((_, i) => {
         const d = document.createElement('button');
         d.className = 'dot' + (i === 0 ? ' active' : '');
         d.addEventListener('click', () => moveTo(i));
         dots.appendChild(d);
       });
+
       function moveTo(i) {
         const w = items[0].getBoundingClientRect().width + parseFloat(getComputedStyle(track).gap);
         track.style.transform = `translateX(-${w * i}px)`;
@@ -222,9 +222,10 @@
         dots.children[i].classList.add('active');
         current = i;
       }
+
       let startX = 0;
       track.addEventListener('touchstart', e => startX = e.touches[0].pageX);
-      track.addEventListener('touchend', e => {
+      track.addEventListener('touchend',   e => {
         const diff = startX - e.changedTouches[0].pageX;
         if (Math.abs(diff) > 50) {
           if (diff > 0 && current < items.length - 1) moveTo(current + 1);
@@ -236,43 +237,33 @@
     // CTA Button: envío al API y redirección a WhatsApp
     document.getElementById('ctaButton').addEventListener('click', async e => {
       e.preventDefault();
+
+      // Leer nombre
       const name = document.getElementById('username').value.trim();
       if (!name) {
         const inp = document.getElementById('username');
         inp.classList.add('shake');
-        setTimeout(()=> inp.classList.remove('shake'), 500);
+        setTimeout(() => inp.classList.remove('shake'), 500);
         return;
       }
 
-      // Generar ID y mensaje
-      const id = generateUUID();
-      const textoCompleto = `${mensajeBase} Mi código promocional es: ${id}%0AEste es mi nombre: ${encodeURIComponent(name)}`;
+      // Construir mensaje
+      const mensajeBase = 'Hola, vengo por la promo del 200% extra!';
+      const plainText   = `${mensajeBase} Mi código promocional es: ${uuid}
+Este es mi nombre: ${name}`;
+      const textoCompleto = encodeURIComponent(plainText);
 
-      // Esperar cookies de Meta Pixel
-      await Promise.all([ waitForCookie('_fbc'), waitForCookie('_fbp') ]);
-
-      // Construir y enviar payload
-      const cookies = parseCookies();
-      const payload = {
-        event:     'ViewContent',
-        timestamp: new Date().toISOString(),
-        _fbc:      cookies._fbc || null,
-        _fbp:      cookies._fbp || null,
-        id
-      };
-      fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(()=>{ /* silencio */ })
-        .finally(() => {
-          // Redirección a WhatsApp con número aleatorio
-          const num = whatsappNumbers[Math.floor(Math.random() * whatsappNumbers.length)];
-          window.location.href = `https://wa.me/${num}?text=${textoCompleto}`;
-        });
+      // Redirección a WhatsApp
+      window.location.href = `https://wa.me/${number}?text=${textoCompleto}`;
     });
 
-  </script>
-  <script src="testimonials-carousel.js"></script>
-</body>
-</html>
+  } catch (err) {
+    console.error('Error en flujo de redirección:', err);
+  }
+});
+</script>
+<script src="testimonials-carousel.js"></script>
+
+
+
+
