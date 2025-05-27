@@ -249,7 +249,6 @@ input[type="text"]:-ms-input-placeholder      { animation: placeholderBlink 1s e
   width: 100%;
   margin-top: var(--gutter);
 }
-
 .carousel-section h2 {
   font-size: 1rem;
   font-weight: 600;
@@ -261,12 +260,40 @@ input[type="text"]:-ms-input-placeholder      { animation: placeholderBlink 1s e
   overflow: hidden;
 }
 
-/* 7. Carousel: grab, pausa & animación via JS */
 .carousel-track {
   display: flex;
   gap: 0.5rem;
-  /* scroll continuo definido por --scroll-end y --duration */
-  animation: scrollCarousel var(--duration, 28s) linear infinite;
+  transition: transform var(--fast) var(--ease);
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+  animation: scrollCarousel 20s linear infinite;
+}
+.carousel-track:active {
+  cursor: grabbing;
+  animation-play-state: paused;
+}
+
+@keyframes scrollCarousel {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.carousel-item {
+  /* ⚠️ Fija cada slide al 20% (5 ítems por fila) restando los gaps */
+  flex: 0 0 calc((100% - (4 * 0.5rem)) / 5);
+  position: relative;
+}
+
+.skeleton {
+  position: absolute;
+  inset: 0;
+  background: rgba(224,247,255,0.1);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50%     { opacity: 0.4; }
 }
 
 .carousel-item img {
@@ -275,12 +302,22 @@ input[type="text"]:-ms-input-placeholder      { animation: placeholderBlink 1s e
   object-fit: cover;
 }
 
-
-
-
-@keyframes scrollCarousel {
-  from { transform: translateX(0); }
-  to   { transform: translateX(var(--scroll-end)); }
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+.dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  background: rgba(224,247,255,0.5);
+  border: none;
+  border-radius: 50%;
+  transition: background var(--fast) var(--ease);
+}
+.dot.active {
+  background: var(--accent-light);
 }
 
 /*------------------------------------
