@@ -320,6 +320,7 @@ input[type="text"]:-ms-input-placeholder      { animation: placeholderBlink 1s e
   background: var(--accent-light);
 }
 
+
 /*------------------------------------
 8. Testimonials header
 ------------------------------------*/
@@ -398,7 +399,7 @@ input[type="text"]:-ms-input-placeholder      { animation: placeholderBlink 1s e
 
 
 /*logo*/
-.logo  {
+.logo img {
   width: 80px;
   height: auto;
   display: block;
