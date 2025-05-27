@@ -269,20 +269,18 @@ input[type="text"]:-ms-input-placeholder      { animation: placeholderBlink 1s e
   animation: scrollCarousel var(--duration, 28s) linear infinite;
 }
 
-.carousel-item  {
-  border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-@keyframes scrollCarousel {
-  from { transform: translateX(0); }
-  to   { transform: translateX(var(--scroll-end)); }
-}
-
 .carousel-item img {
   width: 100%;
   border-radius: calc(var(--radius)/1.3);
   object-fit: cover;
+}
+
+
+
+
+@keyframes scrollCarousel {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--scroll-end)); }
 }
 
 /*------------------------------------
